@@ -5,6 +5,8 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/debug"
+	"io"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,10 +14,12 @@ import (
 )
 
 const STORE_URL = "https://www.fyvor.com/stores/"
+const CODE_URL  = "https://www.fyvor.com/ajax/polls.php"
 
 var (
 	row  = 2
 	row2 = 2
+	row3 = 2
 	lock sync.Mutex
 	err error
 )
@@ -48,6 +52,7 @@ type Coupon struct {
 func main() {
 	f := excelize.NewFile()
 	f.NewSheet("Sheet2")
+	f.NewSheet("Sheet3")
 	// 设置 term表 表头
 	f.SetCellValue("Sheet1", "A1", "SeoTitle")
 	f.SetCellValue("Sheet1", "B1", "H1")
@@ -68,6 +73,9 @@ func main() {
 	f.SetCellValue("Sheet2", "I1", "Type")
 	f.SetCellValue("Sheet2", "J1", "Recommend")
 	f.SetCellValue("Sheet2", "K1", "Exclusive")
+	// 设置 code表 表头
+	f.SetCellValue("Sheet3", "A1", "displayId")
+	f.SetCellValue("Sheet3", "B1", "code")
 
 	c := colly.NewCollector(
 		colly.Async(true),
@@ -99,20 +107,47 @@ func main() {
 		fmt.Println("Visiting", r.URL)
 	})
 	detailCollector.OnHTML("html", func(e *colly.HTMLElement) {
+		// 请求code链接
+		if e.Request.URL.Path == "/ajax/polls.php"  {
+			displayId := e.Request.Ctx.Get("displayId")
+			code := string(e.Response.Body)
+			fmt.Println("displayId:", displayId, "code:", code)
+			lock.Lock()
+			defer lock.Unlock()
+			f.SetCellValue("Sheet3", "A" + strconv.Itoa(row3), displayId)
+			f.SetCellValue("Sheet3", "B" + strconv.Itoa(row3), code)
+			row3++
+			return
+		}
 		coupons := make([]Coupon, 0)
 		e.ForEach("#coupon_list .c_list .ds_list", func(i int, ee *colly.HTMLElement) {
+			var (
+				couponType = ee.Attr("data-type")
+				couponDisplayId = strings.TrimPrefix(ee.Attr("id"), "cb_")
+				err error
+			)
 			coupons = append(coupons, Coupon{
 				Title:       ee.ChildText(".coupon_title"),
 				Description: ee.ChildText(".cpdesc"),
 				ExpireAt:    ee.ChildText(".ex_time"),
 				AddTime:     ee.ChildText(".add_time"),
 				Verified:    ee.ChildAttr("span.verify", "class"),
-				Code:        strings.TrimPrefix(ee.Attr("id"), "cb_"),
+				Code:        couponDisplayId,
 				OutUrl:      ee.Attr("data-href"),
-				Type:        ee.Attr("data-type"),
+				Type:        couponType,
 				Recommend:   ee.ChildText(".coupon_recom_tag"),
 				Exclusive:   ee.ChildText(".coupon_exclu_tag"),
 			})
+			if couponType == "code" {
+				var (
+					ctx = colly.NewContext()
+					requestData = map[string]string{"act": "8", "display_id": couponDisplayId, "isMix": "1" }
+				)
+				ctx.Put("displayId", couponDisplayId)
+				if err = detailCollector.Request("POST", CODE_URL, createFormReader(requestData), ctx, *e.Request.Headers); err != nil {
+					fmt.Println("post code_url:", err.Error())
+				}
+			}
 		})
 		var snsMap string
 		e.ForEach(".social_link ul li", func(i int, ee *colly.HTMLElement) {
@@ -130,7 +165,6 @@ func main() {
 			Domain: strings.TrimPrefix(e.ChildText(".golink"), "Visit "),
 			SnsLink: snsMap,
 			Description: e.ChildText(".store_de p"),
-			// Coupons: coupons,
 		}
 		lock.Lock()
 		defer lock.Unlock()
@@ -158,9 +192,13 @@ func main() {
 		}
 	})
 	for i:= 'A'; i <= 'Z'; i++ {
-		c.Visit(fmt.Sprintf("%s%c/", STORE_URL, i))
+		if err = c.Visit(fmt.Sprintf("%s%c/", STORE_URL, i)); err != nil {
+			fmt.Println("访问store链接:", err.Error())
+		}
 	}
-	c.Visit(fmt.Sprintf("%sOther", STORE_URL))
+	if err = c.Visit(fmt.Sprintf("%sOther", STORE_URL)); err != nil {
+		fmt.Println("访问store other链接:", err.Error())
+	}
 
 	// 测试
 	// detailCollector.Visit("https://www.fyvor.com/coupons/10web.io/")
@@ -169,4 +207,12 @@ func main() {
 	if err := f.SaveAs("./pachong2.xlsx"); err != nil {
 		fmt.Println("xlsx保存出现错误：", err.Error())
 	}
+}
+
+func createFormReader(data map[string]string) io.Reader {
+	form := url.Values{}
+	for k, v := range data {
+		form.Add(k, v)
+	}
+	return strings.NewReader(form.Encode())
 }
