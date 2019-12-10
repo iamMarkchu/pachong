@@ -13,6 +13,10 @@ github.com/antchfx/xpath v1.1.2/go.mod h1:Yee4kTMuNiPYJ7nSNorELQMr1J33uOpXDMByNY
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/fwhappy/mahjong v0.0.0-20170814073940-b524c327d18e h1:asyzZuOYTksZhur/V+6ZrXh2qo1L26pkPxbQzOTkIew=
+github.com/fwhappy/mahjong v0.0.0-20170814073940-b524c327d18e/go.mod h1:cTtgxbv3ORZLA9Al7Pyy9oZaRc2/jEiR3ASjjmt8Bwk=
+github.com/fwhappy/util v0.0.0-20180525060231-b4d1afcf7632 h1:DNYfidwsMUZ6JUg03F7GGFcqTW04vUATFZOk5NqvWzc=
+github.com/fwhappy/util v0.0.0-20180525060231-b4d1afcf7632/go.mod h1:CujbGPhGyggYbeBVtI+7BtMmnjvEauizSIhnK0STEV8=
 github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=
 github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJAkT8=
 github.com/gocolly/colly v1.2.0 h1:qRz9YAn8FIH0qzgNUw+HT9UN7wm1oF9OBAilwEWpyrI=
